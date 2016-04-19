@@ -4,13 +4,22 @@ project(Pink_Serpent)
 add_subdirectory(cocos2d)
 
 add_definitions(-std=c++11)
-add_definitions(-DLINUX)
+
+if(MSVC)
+	add_definitions(-DWIN32)
+else()
+	add_definitions(-DLINUX)
+endif()
 
 include_directories(
         cocos2d/cocos
         cocos2d/external/glfw3/include/mac
         cocos2d/cocos/editor-support
 )
+
+if(MSVC)
+	include_directories(cocos2d/external/win32-specific/gles/include/OGLES)
+endif()
 
 set(PinkSerpent_SOURCES
         src/main.cpp
@@ -19,10 +28,21 @@ set(PinkSerpent_SOURCES
 )
 
 add_executable(PinkSerpent ${PinkSerpent_SOURCES})
-target_link_libraries(PinkSerpent cocos2d)
 
-add_custom_command(
-        TARGET PinkSerpent
-        POST_BUILD
-        COMMAND cp -R ${CMAKE_SOURCE_DIR}/Resources ${CMAKE_BINARY_DIR}
-)
+if(MSVC)
+	link_directories(
+		cocos2d/external/win32-specific/gles/prebuilt
+	)
+	target_link_libraries(PinkSerpent cocos2d glew32)
+else()
+	target_link_libraries(PinkSerpent cocos2d glew)
+endif()
+
+if(MSVC)
+else()
+	add_custom_command(
+	        TARGET PinkSerpent
+	        POST_BUILD
+	        COMMAND cp -R ${CMAKE_SOURCE_DIR}/Resources ${CMAKE_BINARY_DIR}
+	)
+endif()
