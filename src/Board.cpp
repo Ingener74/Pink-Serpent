@@ -2,6 +2,7 @@
 #include <cocos2d.h>
 #include "Board.h"
 #include "Cell.h"
+#include "Horse.h"
 
 using namespace std;
 using namespace cocos2d;
@@ -28,6 +29,10 @@ Board::Board(Node* layer) {
             const auto pos = insertOrigin + Vec2(side * row, side * col);
             m_cells[row * cols + col]->setPosition(pos);
         }
+    }
+
+    {
+    	m_horse.reset(new Horse(layer));
     }
 
     {

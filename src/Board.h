@@ -8,6 +8,7 @@ class Node;
 }
 
 class Cell;
+class Horse;
 
 class Board {
 public:
@@ -19,4 +20,6 @@ private:
 
     using Cells = std::vector<std::unique_ptr<Cell>>;
     Cells m_cells;
+
+    std::unique_ptr<Horse> m_horse;
 };

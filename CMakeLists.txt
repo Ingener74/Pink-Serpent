@@ -34,6 +34,9 @@ set(PinkSerpent_SOURCES
         
         src/Cell.cpp
         src/Cell.h # Qt Creator visible
+        
+        src/Horse.cpp
+        src/Horse.h # Qt Creator visible
 )
 
 add_executable(PinkSerpent ${PinkSerpent_SOURCES})
