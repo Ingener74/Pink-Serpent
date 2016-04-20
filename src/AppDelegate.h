@@ -17,5 +17,4 @@ public:
     virtual void applicationWillEnterForeground();
 
 private:
-    std::string m_base;
 };

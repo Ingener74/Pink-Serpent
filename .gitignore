@@ -29,3 +29,6 @@
 
 .idea/
 build/
+/.cproject
+/.project
+/.settings/

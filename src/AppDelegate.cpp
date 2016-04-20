@@ -5,16 +5,14 @@
 using namespace std;
 using namespace cocos2d;
 
-AppDelegate::AppDelegate(){
+AppDelegate::AppDelegate() {
 }
 
-AppDelegate::~AppDelegate() 
-{
+AppDelegate::~AppDelegate() {
 }
 
-void AppDelegate::initGLContextAttrs()
-{
-    GLContextAttrs glContextAttrs = {8, 8, 8, 8, 24, 8};
+void AppDelegate::initGLContextAttrs() {
+    GLContextAttrs glContextAttrs = { 8, 8, 8, 8, 24, 8 };
 
     GLView::setGLContextAttrs(glContextAttrs);
 }
@@ -22,23 +20,24 @@ void AppDelegate::initGLContextAttrs()
 bool AppDelegate::applicationDidFinishLaunching() {
     auto director = Director::getInstance();
     auto glview = director->getOpenGLView();
-    if(!glview) {
+    if (!glview) {
         glview = GLViewImpl::create("Ping Serpent");
         director->setOpenGLView(glview);
     }
 
     director->setOpenGLView(glview);
 
+    glview->setFrameSize(1024, 768);
     glview->setDesignResolutionSize(1024, 768, ResolutionPolicy::NO_BORDER);
 
-	Size frameSize = glview->getFrameSize();
-    
+    Size frameSize = glview->getFrameSize();
+
     vector<string> searchPath;
 
     searchPath.push_back("main");
 
     director->setContentScaleFactor(1.f);
-    
+
     FileUtils::getInstance()->setSearchPaths(searchPath);
 
     director->setDisplayStats(true);

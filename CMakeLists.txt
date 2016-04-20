@@ -24,7 +24,16 @@ endif()
 set(PinkSerpent_SOURCES
         src/main.cpp
         src/AppDelegate.cpp
+        src/AppDelegate.h # Qt Creator visible
+        
         src/MainLayer.cpp
+        src/MainLayer.h # Qt Creator visible
+        
+        src/Board.cpp
+        src/Board.h # Qt Creator visible
+        
+        src/Cell.cpp
+        src/Cell.h # Qt Creator visible
 )
 
 add_executable(PinkSerpent ${PinkSerpent_SOURCES})
@@ -35,7 +44,7 @@ if(MSVC)
 	)
 	target_link_libraries(PinkSerpent cocos2d glew32)
 else()
-	target_link_libraries(PinkSerpent cocos2d glew)
+	target_link_libraries(PinkSerpent cocos2d)
 endif()
 
 if(MSVC)
