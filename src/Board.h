@@ -40,7 +40,10 @@ private:
 
     static float distance(const Cell& c1, const Cell& c2);
     static Cell closestCell(const std::vector<Cell>& cells, const Cell& cell);
-    std::vector<Cell> getPosibleMoves(Cell) const;
+    static Cell firstNotRepeated(const std::vector<Cell>& tour, const std::vector<Cell>& posible);
+
+    bool findMoves(std::vector<Cell> &output, int pos, const Cell& current, const Cell& end, int chess[rows][cols]) const;
+
     std::vector<Cell> findKnightsTour(Cell start, Cell end) const;
 
     size_t m_disabled = 10;

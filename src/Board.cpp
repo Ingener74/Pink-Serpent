@@ -232,7 +232,7 @@ Cell Board::closestCell(const std::vector<Cell>& cells, const Cell& cell) {
     return cells[resc];
 }
 
-std::vector<Cell> Board::getPosibleMoves(Cell cell) const {
+bool Board::findMoves(std::vector<Cell> &output, int pos, const Cell& current, const Cell& end, int chess[rows][cols]) const {
     static Cell dirs[8]{
         {1, 2},
         {2, 1},
@@ -247,25 +247,48 @@ std::vector<Cell> Board::getPosibleMoves(Cell cell) const {
         {-1, 2},
     };
 
-    std::vector<Cell> res;
-    for(const auto& c: dirs){
-        int col = cell.col + c.col;
-        int row = cell.row + c.row;
+    for (const auto& c : dirs) {
+        int col = current.col + c.col;
+        int row = current.row + c.row;
 
-        if(col >= 0 && col <8 && row >= 0 && row < 8)
-            if(m_cells[cellIndex(row, col)].m_spriteEnabled->isVisible())
-                res.push_back({row, col});
+        if (col >= 0 && col < 8 && row >= 0 && row < 8 && chess[row][col] == 0) {
+            Cell r { row, col };
+            output.push_back(r);
+
+            chess[row][col] = pos;
+            pos++;
+
+            if(r.row == end.row && r.col == end.col)
+                return true;
+            return findMoves(output, pos, r, end, chess);
+        }
     }
-    return res;
+    return false;
+}
+
+Cell Board::firstNotRepeated(const std::vector<Cell>& tour, const std::vector<Cell>&  posible) {
+    for(const auto& c: posible){
+        bool repeat = false;
+        for(const auto& t: tour){
+            if(c.row == t.row && c.col == t.col)
+                repeat = true;
+        }
+        if(!repeat)
+            return c;
+    }
+    return {-1, -1};
 }
 
 std::vector<Cell> Board::findKnightsTour(Cell start, Cell end) const {
-    Cell cell = start;
+    int chess[rows][cols];
+    {
+        for(int row = 0; row < rows; ++row){
+            for(int col = 0; col < cols; ++col){
+                chess[row][col] = -1 * !m_cells[cellIndex(row, col)].m_spriteEnabled->isVisible();
+            }
+        }
+    }
     std::vector<Cell> tour;
-    do {
-        auto posMoves = getPosibleMoves(cell);
-        cell = closestCell(posMoves, end);
-        tour.push_back(cell);
-    } while (cell.row != end.row && cell.col != end.col);
+    bool tourExist = findMoves(tour, 1, start, end, chess);
     return tour;
 }
