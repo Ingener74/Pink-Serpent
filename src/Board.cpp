@@ -65,19 +65,6 @@ Board::Board(Node* layer) {
         layer->addChild(m_knight);
 
         m_knight->setPosition(m_cells[cellIndex(randomKnightCell)].m_spriteEnabled->getPosition());
-
-//        m_knight->runAction(
-//            Repeat::create(
-//                Sequence::create(
-//                    MoveTo::create(1.f, m_cells[cellIndex(0, 0)].m_spriteEnabled->getPosition()),
-//                    MoveTo::create(1.f, m_cells[cellIndex(7, 0)].m_spriteEnabled->getPosition()),
-//                    MoveTo::create(1.f, m_cells[cellIndex(7, 7)].m_spriteEnabled->getPosition()),
-//                    MoveTo::create(1.f, m_cells[cellIndex(0, 7)].m_spriteEnabled->getPosition()),
-//                    nullptr
-//                    ),
-//                5
-//            )
-//        );
     }
 
     auto knightTour = findKnightsTour(randomKnightCell, randomTargetCell);
@@ -205,7 +192,7 @@ CellNode Board::createCell(Node* layer, const std::string& row, const std::strin
     return {spriteEnabled, spriteDisabled, label};
 }
 
-Cell Board::randomCell() const {
+Cell Board::randomCell() {
     return {
         static_cast<int>(rows * (rand() / double(RAND_MAX))),
         static_cast<int>(cols * (rand() / double(RAND_MAX)))
@@ -228,11 +215,11 @@ Cell Board::randomEnabledCell() const {
     }
 }
 
-float Board::distance(const Cell& c1, const Cell& c2) const {
+float Board::distance(const Cell& c1, const Cell& c2) {
     return sqrt((c2.col - c1.col) * (c2.col - c1.col) + (c2.row - c1.row) * (c2.row - c1.row));
 }
 
-Cell Board::closestCell(const std::vector<Cell>& cells, const Cell& cell) const {
+Cell Board::closestCell(const std::vector<Cell>& cells, const Cell& cell) {
     size_t resc = 0;
     float resf = std::numeric_limits<float>::max();
     for(size_t i = 0; i < cells.size(); ++i){

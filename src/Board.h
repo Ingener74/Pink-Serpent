@@ -22,15 +22,14 @@ public:
     Board(cocos2d::Node* = nullptr);
     virtual ~Board();
 
-    const int side = 80, rows = 8, cols = 8;
+    static const int side = 80, rows = 8, cols = 8;
 
 private:
     CellNode createCell(cocos2d::Node*, const std::string& row, const std::string& column);
     void createCells(cocos2d::Node*);
 
-    Cell randomCell() const;
+    static Cell randomCell();
     Cell randomEnabledCell() const;
-//    cocos2d::Vec2 randomEnabledCellPosition() const;
 
     size_t cellIndex(int row, int col) const {
         return row * cols + col;
@@ -39,8 +38,8 @@ private:
         return cell.row * cols + cell.col;
     }
 
-    float distance(const Cell& c1, const Cell& c2) const;
-    Cell closestCell(const std::vector<Cell>& cells, const Cell& cell) const;
+    static float distance(const Cell& c1, const Cell& c2);
+    static Cell closestCell(const std::vector<Cell>& cells, const Cell& cell);
     std::vector<Cell> getPosibleMoves(Cell) const;
     std::vector<Cell> findKnightsTour(Cell start, Cell end) const;
 
