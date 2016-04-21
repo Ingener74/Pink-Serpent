@@ -12,7 +12,10 @@ else()
 endif()
 
 include_directories(
+        cocos2d
         cocos2d/cocos
+        cocos2d/extensions
+        cocos2d/external
         cocos2d/external/glfw3/include/mac
         cocos2d/cocos/editor-support
 )

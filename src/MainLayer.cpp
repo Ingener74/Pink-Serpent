@@ -4,6 +4,7 @@
 
 using namespace std;
 using namespace cocos2d;
+using namespace cocos2d::extension;
 
 MainLayer::MainLayer() {
 }
@@ -62,9 +63,21 @@ bool MainLayer::init() {
 
     m_board.reset(new Board(this));
 
+    {
+        auto buttonStart = ControlButton::create(Label::createWithTTF("Start", "fonts/arial.ttf", 24), Scale9Sprite::create("button.png"));
+        buttonStart->setBackgroundSpriteForState(Scale9Sprite::create("buttonHighlighted.png"), Control::State::HIGH_LIGHTED);
+        buttonStart->setPosition(50, visibleSize.height/2);
+        buttonStart->addTargetWithActionForControlEvents(this, static_cast<void (Ref::*)(Ref*, Control::EventType)>(&MainLayer::startButtonHandler), Control::EventType::TOUCH_DOWN);
+        addChild(buttonStart);
+    }
+
     return true;
 }
 
 void MainLayer::menuCloseCallback(Ref*) {
     Director::getInstance()->end();
+}
+
+void MainLayer::startButtonHandler(Ref*, cocos2d::extension::Control::EventType eventType) {
+    cout << __PRETTY_FUNCTION__ << endl;
 }

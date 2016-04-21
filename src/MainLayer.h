@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <cocos2d.h>
+#include <cocos-ext.h>
 
 class Board;
 
@@ -19,6 +20,8 @@ public:
     void menuCloseCallback(Ref* sender);
 
     CREATE_FUNC(MainLayer);
+
+    void startButtonHandler(Ref*, cocos2d::extension::Control::EventType);
 
 private:
     std::unique_ptr<Board> m_board;

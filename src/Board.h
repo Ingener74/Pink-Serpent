@@ -3,9 +3,7 @@
 #include <vector>
 #include <memory>
 
-namespace cocos2d {
-class Node;
-}
+#include <cocos2d.h>
 
 struct Cell {
     int row;
@@ -17,12 +15,14 @@ struct CellNode {
     cocos2d::Label* m_label;
 };
 
-class Board {
+class Board: public cocos2d::Ref {
 public:
     Board(cocos2d::Node* = nullptr);
     virtual ~Board();
 
     static const int side = 80, rows = 8, cols = 8;
+
+    void repeat();
 
 private:
     CellNode createCell(cocos2d::Node*, const std::string& row, const std::string& column);
@@ -38,18 +38,15 @@ private:
         return cell.row * cols + cell.col;
     }
 
-    static float distance(const Cell& c1, const Cell& c2);
-    static Cell closestCell(const std::vector<Cell>& cells, const Cell& cell);
-    static Cell firstNotRepeated(const std::vector<Cell>& tour, const std::vector<Cell>& posible);
-
-    bool findMoves(std::vector<Cell> &output, int pos, const Cell& current, const Cell& end, int chess[rows][cols]) const;
-
-    std::vector<Cell> findKnightsTour(Cell start, Cell end) const;
+    bool findKnightsTour(std::vector<Cell> &tour, std::vector<int> &chessBoard, int position, const Cell& currentCell, const Cell& endCell) const;
 
     size_t m_disabled = 10;
+
+    cocos2d::Node* m_layer = nullptr;
 
     using Cells = std::vector<CellNode>;
     Cells m_cells;
     cocos2d::Sprite* m_knight = nullptr;
     cocos2d::Sprite* m_target = nullptr;
+    cocos2d::DrawNode* m_lines = nullptr;
 };

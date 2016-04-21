@@ -10,6 +10,8 @@ using namespace cocos2d;
 Board::Board(Node* layer) {
     assert(layer);
 
+    m_layer = layer;
+
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
@@ -54,7 +56,6 @@ Board::Board(Node* layer) {
         assert(m_target);
         m_target->retain();
         layer->addChild(m_target);
-        m_target->setPosition(m_cells[cellIndex(randomTargetCell)].m_spriteEnabled->getPosition());
     }
 
     auto randomKnightCell = randomEnabledCell();
@@ -63,24 +64,9 @@ Board::Board(Node* layer) {
         assert(m_knight);
         m_knight->retain();
         layer->addChild(m_knight);
-
-        m_knight->setPosition(m_cells[cellIndex(randomKnightCell)].m_spriteEnabled->getPosition());
     }
 
-    auto knightTour = findKnightsTour(randomKnightCell, randomTargetCell);
-    cout << "knightTour " << endl;
-    for (const auto& c : knightTour) {
-        cout << c.row << " " << c.col << endl;
-    }
-    cout << "knightTour end" << endl;
-
-    Vector<FiniteTimeAction*> knightsMoves;
-
-    for(const auto& c: knightTour){
-        knightsMoves.pushBack(MoveTo::create(1.f, m_cells[cellIndex(c)].m_spriteEnabled->getPosition()));
-    }
-
-    m_knight->runAction(Sequence::create(knightsMoves));
+    repeat();
 }
 
 Board::~Board() {
@@ -88,6 +74,67 @@ Board::~Board() {
     m_knight->release();
     assert(m_target);
     m_target->release();
+
+    for (auto& c : m_cells) {
+        c.m_spriteEnabled->release();
+        c.m_spriteDisabled->release();
+        c.m_label->release();
+    }
+    m_lines->release();
+}
+
+void Board::repeat() {
+    assert(m_layer);
+
+    auto randomTargetCell = randomEnabledCell();
+    m_target->setPosition(m_cells[cellIndex(randomTargetCell)].m_spriteEnabled->getPosition());
+
+    auto randomKnightCell = randomEnabledCell();
+    m_knight->setPosition(m_cells[cellIndex(randomKnightCell)].m_spriteEnabled->getPosition());
+
+    std::vector<int> chessBoard(rows * cols);
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            chessBoard[cellIndex(row, col)] = -1 * !m_cells[cellIndex(row, col)].m_spriteEnabled->isVisible();
+        }
+    }
+
+    Cell start = randomKnightCell, end = randomTargetCell;
+
+    vector<Cell> tour;
+    bool tourExists = findKnightsTour(tour, chessBoard, 1, start, end);
+
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            m_cells[cellIndex(row, col)].m_label->setString(to_string(chessBoard[cellIndex(row, col)]));
+        }
+    }
+
+    if(m_lines){
+        m_layer->removeChild(m_lines, true);
+        m_lines = nullptr;
+    }
+
+    m_lines = DrawNode::create(2);
+    for(size_t i = 0; i < tour.size() - 1; ++i){
+        m_lines->drawLine(
+                m_cells[cellIndex(tour[i])].m_spriteEnabled->getPosition(),
+                m_cells[cellIndex(tour[i + 1])].m_spriteEnabled->getPosition(),
+                Color4F(1.f, 0.f, 0.f, 1.f));
+    }
+    m_layer->addChild(m_lines);
+
+    Vector<FiniteTimeAction*> knightsMoves;
+    for(const auto& c: tour){
+        knightsMoves.pushBack(MoveTo::create(.2f, m_cells[cellIndex(c)].m_spriteEnabled->getPosition()));
+    }
+    knightsMoves.pushBack(DelayTime::create(.5f));
+
+    knightsMoves.pushBack(CallFunc::create([this]{
+        repeat();
+    }));
+
+    m_knight->runAction(Sequence::create(knightsMoves));
 }
 
 void Board::createCells(cocos2d::Node* layer) {
@@ -215,80 +262,38 @@ Cell Board::randomEnabledCell() const {
     }
 }
 
-float Board::distance(const Cell& c1, const Cell& c2) {
-    return sqrt((c2.col - c1.col) * (c2.col - c1.col) + (c2.row - c1.row) * (c2.row - c1.row));
-}
+Cell possibleMoves[8]{
+    {1, 2},
+    {2, 1},
 
-Cell Board::closestCell(const std::vector<Cell>& cells, const Cell& cell) {
-    size_t resc = 0;
-    float resf = std::numeric_limits<float>::max();
-    for(size_t i = 0; i < cells.size(); ++i){
-        float dist = distance(cells[i], cell);
-        if (dist < resf) {
-            resf = dist;
-            resc = i;
-        }
-    }
-    return cells[resc];
-}
+    {2, -1},
+    {1, -2},
 
-bool Board::findMoves(std::vector<Cell> &output, int pos, const Cell& current, const Cell& end, int chess[rows][cols]) const {
-    static Cell dirs[8]{
-        {1, 2},
-        {2, 1},
+    {-1, -2},
+    {-2, -1},
 
-        {2, -1},
-        {1, -2},
+    {-2, 1},
+    {-1, 2},
+};
 
-        {-1, -2},
-        {-2, -1},
+bool Board::findKnightsTour(std::vector<Cell>& tour, std::vector<int>& chessBoard,
+        int position, const Cell& currentCell, const Cell& endCell) const {
 
-        {-2, 1},
-        {-1, 2},
-    };
+    for (const auto& c : possibleMoves) {
+        int col = currentCell.col + c.col;
+        int row = currentCell.row + c.row;
 
-    for (const auto& c : dirs) {
-        int col = current.col + c.col;
-        int row = current.row + c.row;
-
-        if (col >= 0 && col < 8 && row >= 0 && row < 8 && chess[row][col] == 0) {
+        if (col >= 0 && col < cols && row >= 0 && row < rows && chessBoard[cellIndex(row, col)] == 0) {
             Cell r { row, col };
-            output.push_back(r);
+            tour.push_back(r);
 
-            chess[row][col] = pos;
-            pos++;
+            chessBoard[cellIndex(row, col)] = position;
+            position++;
 
-            if(r.row == end.row && r.col == end.col)
+            if (r.row == endCell.row && r.col == endCell.col)
                 return true;
-            return findMoves(output, pos, r, end, chess);
+            return findKnightsTour(tour, chessBoard, position, r, endCell);
         }
     }
     return false;
-}
-
-Cell Board::firstNotRepeated(const std::vector<Cell>& tour, const std::vector<Cell>&  posible) {
-    for(const auto& c: posible){
-        bool repeat = false;
-        for(const auto& t: tour){
-            if(c.row == t.row && c.col == t.col)
-                repeat = true;
-        }
-        if(!repeat)
-            return c;
-    }
-    return {-1, -1};
-}
-
-std::vector<Cell> Board::findKnightsTour(Cell start, Cell end) const {
-    int chess[rows][cols];
-    {
-        for(int row = 0; row < rows; ++row){
-            for(int col = 0; col < cols; ++col){
-                chess[row][col] = -1 * !m_cells[cellIndex(row, col)].m_spriteEnabled->isVisible();
-            }
-        }
-    }
-    std::vector<Cell> tour;
-    bool tourExist = findMoves(tour, 1, start, end, chess);
-    return tour;
 }
