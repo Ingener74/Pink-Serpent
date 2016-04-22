@@ -22,6 +22,7 @@ bool MainLayer::init() {
     if (!Layer::init())
         return false;
 
+    // Обработчики мыши
     auto mouseListener = EventListenerMouse::create();
     mouseListener->onMouseDown = [=](Event* e) {
         auto event = dynamic_cast<EventMouse*>(e);
@@ -174,6 +175,8 @@ void MainLayer::menuCloseCallback(Ref*) {
 }
 
 void MainLayer::repeat(Cell start, Cell end, std::function<void()> doAfter) {
+
+    // Очищаем доску с маркерами и заполняем -1 те клетки которые у нас заблокированы
     std::vector<int> chessBoard(rows * cols);
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
@@ -181,20 +184,24 @@ void MainLayer::repeat(Cell start, Cell end, std::function<void()> doAfter) {
         }
     }
 
+    // Ищем путь
     vector<Cell> tour;
     bool tourExists = findKnightsTour(tour, chessBoard, 1, start, end);
 
+    // Копазываем маркеры на доске
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
             m_cells[cellIndex(row, col)].m_label->setString(to_string(chessBoard[cellIndex(row, col)]));
         }
     }
 
+    // Удаляем старые линии
     if(m_lines){
         removeChild(m_lines, true);
         m_lines = nullptr;
     }
 
+    // Строим новые линии по найденному пути
     m_lines = DrawNode::create();
     for(size_t i = 0; i < tour.size() - 1; ++i){
         m_lines->drawLine(
@@ -204,6 +211,7 @@ void MainLayer::repeat(Cell start, Cell end, std::function<void()> doAfter) {
     }
     addChild(m_lines);
 
+    // Строим анимацию коня по новым линиям по найденному пути
     Vector<FiniteTimeAction*> knightsMoves;
     for(const auto& c: tour){
         knightsMoves.pushBack(MoveTo::create(.2f, m_cells[cellIndex(c)].m_spriteEnabled->getPosition()));
@@ -215,6 +223,7 @@ void MainLayer::repeat(Cell start, Cell end, std::function<void()> doAfter) {
     }));
     knightsMoves.pushBack(CallFunc::create(doAfter));
 
+    // Запускаем анимацию
     m_knight->runAction(Sequence::create(knightsMoves));
 }
 
@@ -224,25 +233,25 @@ void MainLayer::createCells(cocos2d::Node* layer) {
             m_cells.push_back(createCell(layer, {row, col}));
 }
 
-const char* rows_[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
-const char* cols_[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
+const char* rows_labels[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
+const char* cols_labels[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
 
-CellNode MainLayer::createCell(Node* layer, Cell cell) {
+MainLayer::CellNode MainLayer::createCell(Node* layer, Cell cell) {
     assert(layer);
 
-    auto spriteEnabled = Sprite::create("cell_normal/" + string(rows_[cell.row]) + string(cols_[cell.col]) + ".png");
+    auto spriteEnabled = Sprite::create("cell_normal/" + string(rows_labels[cell.row]) + string(cols_labels[cell.col]) + ".png");
     assert(spriteEnabled);
     spriteEnabled->retain();
     spriteEnabled->setVisible(true);
     layer->addChild(spriteEnabled);
 
-    auto spriteDisabled = Sprite::create("cell_disabled/" + string(rows_[cell.row]) + string(cols_[cell.col]) + ".png");
+    auto spriteDisabled = Sprite::create("cell_disabled/" + string(rows_labels[cell.row]) + string(cols_labels[cell.col]) + ".png");
     assert(spriteDisabled);
     spriteDisabled->retain();
     spriteDisabled->setVisible(false);
     layer->addChild(spriteDisabled);
 
-    auto label = Label::createWithTTF(string(rows_[cell.row]) + cols_[cell.col], "fonts/arial.ttf", 12);
+    auto label = Label::createWithTTF(string(rows_labels[cell.row]) + cols_labels[cell.col], "fonts/arial.ttf", 12);
     assert(label);
     label->retain();
     label->setColor(Color3B { 0, 0, 0 });
@@ -250,15 +259,15 @@ CellNode MainLayer::createCell(Node* layer, Cell cell) {
     return {spriteEnabled, spriteDisabled, label, cell};
 }
 
-Cell MainLayer::randomCell() {
+MainLayer::Cell MainLayer::randomCell() {
     return {
         static_cast<int>(rows * (rand() / double(RAND_MAX))),
         static_cast<int>(cols * (rand() / double(RAND_MAX)))
     };
 }
 
-Cell MainLayer::randomEnabledCell() const {
-    { // check has enabled cells
+MainLayer::Cell MainLayer::randomEnabledCell() const {
+    { // Проверяем что есть не заблокированые клетки чтобы не зависнуть
         bool check = false;
         for (size_t i = 0; i < rows * cols; ++i) {
             check = m_cells[i].m_spriteEnabled->isVisible();
@@ -272,20 +281,6 @@ Cell MainLayer::randomEnabledCell() const {
             return rc;
     }
 }
-
-Cell possibleMoves[8]{
-    {1, 2},
-    {2, 1},
-
-    {2, -1},
-    {1, -2},
-
-    {-1, -2},
-    {-2, -1},
-
-    {-2, 1},
-    {-1, 2},
-};
 
 size_t MainLayer::findClosestCellNode(const cocos2d::Vec2& mousePos) const {
 
@@ -302,8 +297,23 @@ size_t MainLayer::findClosestCellNode(const cocos2d::Vec2& mousePos) const {
     return minIndx;
 }
 
+// Смещения "возможные ходы Коня"
+MainLayer::Cell possibleMoves[8]{
+    {1, 2},
+    {2, 1},
+
+    {2, -1},
+    {1, -2},
+
+    {-1, -2},
+    {-2, -1},
+
+    {-2, 1},
+    {-1, 2},
+};
+
 bool MainLayer::findKnightsTour(std::vector<Cell>& tour, std::vector<int>& chessBoard,
-        int position, const Cell& currentCell, const Cell& endCell) const {
+        int position, const Cell& currentCell, const Cell& endCell) {
 
     for (const auto& c : possibleMoves) {
         int col = currentCell.col + c.col;
@@ -333,6 +343,8 @@ void MainLayer::autoButtonHandler(Ref*, cocos2d::extension::Control::EventType e
 }
 
 void MainLayer::ManualState::onEnter(MainLayer* m) {
+    m->m_startButton->setEnabled(true);
+    m->m_startButton->setEnabled(true);
     m->m_help->setString(R"(-- Для начала демонстрации перетащите Коня и цель на желаемые клетки и нажмите "Начать"
 -- Для показа демонстрации в Автоматическом режиме нажмите "Авто режим")");
     m_figures = {{m->m_knight, {}}, {m->m_target, {}}};
@@ -373,6 +385,8 @@ void MainLayer::ManualState::handleMouse(MainLayer* m, Action action, float x, f
 }
 
 void MainLayer::TourAnimationState::onEnter(MainLayer* m) {
+    m->m_startButton->setEnabled(false);
+    m->m_startButton->setEnabled(false);
 }
 
 void MainLayer::TourAnimationState::onExit(MainLayer* m) {
@@ -383,6 +397,7 @@ void MainLayer::TourAnimationState::handleTourAnimationEnd(MainLayer* m) {
 }
 
 void MainLayer::AutoState::onEnter(MainLayer* m) {
+    m->m_startButton->setEnabled(false);
     m->m_help->setString(R"(-- Чтобы закончить демонстрацию в Автоматическом режиме нажмите "Авто режим")");
     m_func = [=] {
         if(m_exit)

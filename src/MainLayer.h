@@ -5,19 +5,21 @@
 #include <cocos2d.h>
 #include <cocos-ext.h>
 
-struct Cell {
-    int row;
-    int col;
-};
-
-struct CellNode {
-    cocos2d::Sprite* m_spriteEnabled, *m_spriteDisabled;
-    cocos2d::Label* m_label;
-    Cell m_cell;
-};
-
 class MainLayer: public cocos2d::Layer {
 public:
+    // Клетка
+    struct Cell {
+        int row;
+        int col;
+    };
+
+    // Клетка шахматной доски
+    struct CellNode {
+        cocos2d::Sprite* m_spriteEnabled, *m_spriteDisabled;
+        cocos2d::Label* m_label;
+        Cell m_cell;
+    };
+
     MainLayer();
     virtual ~MainLayer();
 
@@ -41,8 +43,6 @@ private:
     cocos2d::extension::ControlButton* m_startButton = nullptr;
     cocos2d::extension::ControlButton* m_autoButton = nullptr;
 
-//    std::unique_ptr<Board> m_board;
-//    CellNode createCell(cocos2d::Node*, const std::string& row, const std::string& column);
     CellNode createCell(cocos2d::Node*, Cell);
     void createCells(cocos2d::Node*);
     size_t findClosestCellNode(const cocos2d::Vec2& mousePos) const;
@@ -50,28 +50,40 @@ private:
     static Cell randomCell();
     Cell randomEnabledCell() const;
 
-    size_t cellIndex(int row, int col) const {
+    static size_t cellIndex(int row, int col) {
         return row * cols + col;
     }
-    size_t cellIndex(Cell cell) const {
+    static size_t cellIndex(Cell cell) {
         return cellIndex(cell.row, cell.col);
     }
 
-    bool findKnightsTour(std::vector<Cell> &tour, std::vector<int> &chessBoard, int position, const Cell& currentCell, const Cell& endCell) const;
+    // Поиск пути для Коня
+    static bool findKnightsTour(
+        std::vector<Cell> &tour,      // путь
+        std::vector<int> &chessBoard, // шахматная доска с метками
+        int position,                 // текущая метка
+        const Cell& currentCell,      // текущая клетка
+        const Cell& endCell           // конечная клетка
+    );
 
     size_t m_disabled = 10;
 
     using Cells = std::vector<CellNode>;
     Cells m_cells;
-    cocos2d::Sprite* m_knight = nullptr;
-    cocos2d::Sprite* m_target = nullptr;
-    cocos2d::Sprite* m_selection = nullptr;
-    cocos2d::DrawNode* m_lines = nullptr;
+    cocos2d::Sprite* m_knight = nullptr;     // Конь
+    cocos2d::Sprite* m_target = nullptr;     // Цель
+    cocos2d::Sprite* m_selection = nullptr;  // Выделение
+    cocos2d::DrawNode* m_lines = nullptr;    // Линия показывающая просчитанный путь
 
     enum class Action {
-        Down, Up, Move, Hover, Unknown,
+        Down,    // Мышь нажата
+        Up,      // Мышь отжата
+        Move,    // Мышь двигается нажатая
+        Hover,   // Мышь двигается отжатая
+        Unknown, // хз
     };
 
+    // Паттерн "Состояние" для описания логики чтоли :)
     class State {
     public:
         virtual ~State() = default;
@@ -90,6 +102,7 @@ private:
         }
     };
 
+    // Состояния работы в ручном режиме
     class ManualState: public State {
     public:
         virtual ~ManualState() = default;
@@ -111,6 +124,7 @@ private:
         FiguresCellNodes ::iterator m_currentFigure;
     };
 
+    // Состояние ожидания работы анимации движения Коня по пути
     class TourAnimationState: public State {
     public:
         virtual ~TourAnimationState() = default;
@@ -120,6 +134,7 @@ private:
         virtual void handleTourAnimationEnd(MainLayer*);
     };
 
+    // Состояние автоматической работы
     class AutoState: public State {
     public:
         virtual ~AutoState() = default;
@@ -132,6 +147,8 @@ private:
         std::function<void()> m_func;
         bool m_exit = false;
     };
+
+    // Переключение состояния
     template<typename T>
     void switchState() {
         if(m_state){
