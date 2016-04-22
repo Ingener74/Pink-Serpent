@@ -5,10 +5,19 @@
 #include <cocos2d.h>
 #include <cocos-ext.h>
 
-class Board;
+//class Board;
 
-class MainLayer : public cocos2d::Layer
-{
+struct Cell {
+    int row;
+    int col;
+};
+
+struct CellNode {
+    cocos2d::Sprite* m_spriteEnabled, *m_spriteDisabled;
+    cocos2d::Label* m_label;
+};
+
+class MainLayer: public cocos2d::Layer {
 public:
     MainLayer();
     virtual ~MainLayer();
@@ -22,7 +31,102 @@ public:
     CREATE_FUNC(MainLayer);
 
     void startButtonHandler(Ref*, cocos2d::extension::Control::EventType);
+    void autoButtonHandler(Ref*, cocos2d::extension::Control::EventType);
+    void repeat(Cell start, Cell end, std::function<void()> doAfter);
+
+    static const int side = 80, rows = 8, cols = 8;
 
 private:
-    std::unique_ptr<Board> m_board;
+    cocos2d::Label* m_help;
+
+    cocos2d::extension::ControlButton* m_startButton;
+    cocos2d::extension::ControlButton* m_autoButton;
+
+//    std::unique_ptr<Board> m_board;
+    CellNode createCell(cocos2d::Node*, const std::string& row, const std::string& column);
+    void createCells(cocos2d::Node*);
+
+    static Cell randomCell();
+    Cell randomEnabledCell() const;
+
+    size_t cellIndex(int row, int col) const {
+        return row * cols + col;
+    }
+    size_t cellIndex(Cell cell) const {
+        return cellIndex(cell.row, cell.col);
+    }
+
+    bool findKnightsTour(std::vector<Cell> &tour, std::vector<int> &chessBoard, int position, const Cell& currentCell, const Cell& endCell) const;
+
+    size_t m_disabled = 10;
+
+    using Cells = std::vector<CellNode>;
+    Cells m_cells;
+    cocos2d::Sprite* m_knight = nullptr;
+    cocos2d::Sprite* m_target = nullptr;
+    cocos2d::DrawNode* m_lines = nullptr;
+
+    enum class Action {
+        Down, Up, Move, Unknown,
+    };
+
+    class State {
+    public:
+        virtual ~State() = default;
+
+        virtual void onEnter(MainLayer*){
+        }
+        virtual void onExit(MainLayer*){
+        }
+        virtual void handleStart(MainLayer*) {
+        }
+        virtual void handleAuto(MainLayer*) {
+        }
+        virtual void handleMouse(MainLayer*, Action, float x, float y) {
+        }
+        virtual void handleTourAnimationEnd(MainLayer*) {
+        }
+    };
+
+    class ManualState: public State {
+    public:
+        virtual ~ManualState() = default;
+
+        virtual void onEnter(MainLayer*);
+        virtual void onExit(MainLayer*);
+        virtual void handleStart(MainLayer*);
+        virtual void handleAuto(MainLayer*);
+        virtual void handleMouse(MainLayer*, Action, float x, float y);
+    };
+
+    class TourAnimationState: public State {
+    public:
+        virtual ~TourAnimationState() = default;
+
+        virtual void onEnter(MainLayer*);
+        virtual void onExit(MainLayer*);
+        virtual void handleTourAnimationEnd(MainLayer*);
+    };
+
+    class AutoState: public State {
+    public:
+        virtual ~AutoState() = default;
+
+        virtual void onEnter(MainLayer*);
+        virtual void onExit(MainLayer*);
+        virtual void handleAuto(MainLayer*);
+        virtual void handleTourAnimationEnd(MainLayer*);
+
+        std::function<void()> m_func;
+        bool m_exit = false;
+    };
+    template<typename T>
+    void switchState() {
+        if(m_state){
+            m_state->onExit(this);
+        }
+        m_state.reset(new T);
+        m_state->onEnter(this);
+    }
+    std::unique_ptr<State> m_state;
 };

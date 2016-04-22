@@ -31,9 +31,6 @@ set(PinkSerpent_SOURCES
         
         src/MainLayer.cpp
         src/MainLayer.h # Qt Creator visible
-        
-        src/Board.cpp
-        src/Board.h # Qt Creator visible
 )
 
 add_executable(PinkSerpent ${PinkSerpent_SOURCES})
