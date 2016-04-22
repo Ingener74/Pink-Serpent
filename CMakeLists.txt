@@ -3,7 +3,7 @@ project(Pink_Serpent)
 
 add_subdirectory(cocos2d)
 
-add_definitions(-std=c++11)
+add_definitions(-std=c++11 -fexceptions)
 
 if(MSVC)
 	add_definitions(-DWIN32)

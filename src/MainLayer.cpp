@@ -1,6 +1,5 @@
 #include <iostream>
 #include "MainLayer.h"
-//#include "Board.h"
 
 using namespace std;
 using namespace cocos2d;
@@ -24,19 +23,28 @@ bool MainLayer::init() {
         return false;
 
     auto mouseListener = EventListenerMouse::create();
-    mouseListener->onMouseDown = [=](EventMouse* event) {
+    mouseListener->onMouseDown = [=](Event* e) {
+        auto event = dynamic_cast<EventMouse*>(e);
+        assert(event);
         if(event->getMouseButton() == MOUSE_BUTTON_LEFT){
             m_state->handleMouse(this, Action::Down, event->getCursorX(), event->getCursorY());
         }
     };
-    mouseListener->onMouseUp = [=](EventMouse* event) {
+    mouseListener->onMouseUp = [=](Event* e) {
+        auto event = dynamic_cast<EventMouse*>(e);
+        assert(event);
         if(event->getMouseButton() == MOUSE_BUTTON_LEFT){
             m_state->handleMouse(this, Action::Up, event->getCursorX(), event->getCursorY());
         }
     };
-    mouseListener->onMouseMove = [=](EventMouse* event) {
-        if(event->getMouseButton() == MOUSE_BUTTON_LEFT){
+    mouseListener->onMouseMove = [=](Event* e) {
+        auto event = dynamic_cast<EventMouse*>(e);
+        assert(event);
+        if(event->getMouseButton() == MOUSE_BUTTON_LEFT) {
             m_state->handleMouse(this, Action::Move, event->getCursorX(), event->getCursorY());
+        }
+        else if(event->getMouseButton() == -1) {
+            m_state->handleMouse(this, Action::Hover, event->getCursorX(), event->getCursorY());
         }
     };
     _eventDispatcher->addEventListenerWithFixedPriority(mouseListener, 1);
@@ -109,17 +117,24 @@ bool MainLayer::init() {
             addChild(bottomBorder);
         }
 
-        auto randomTargetCell = randomEnabledCell();
+        {
+            m_selection = Sprite::create("figures/overlay_moveable.png");
+            assert(m_selection);
+            m_selection->setVisible(false);
+            addChild(m_selection);
+        }
+
         {
             m_target = Sprite::create("figures/overlay_selected.png");
             assert(m_target);
+            m_target->setVisible(false);
             addChild(m_target);
         }
 
-        auto randomKnightCell = randomEnabledCell();
         {
             m_knight = Sprite::create("figures/wn.png");
             assert(m_knight);
+            m_target->setVisible(false);
             addChild(m_knight);
         }
     }
@@ -144,7 +159,7 @@ bool MainLayer::init() {
     }
 
     {
-        m_help = Label::createWithTTF(R"(Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec eget tortor diam. Proin ultrices facilisis ipsum, ultrices varius tortor venenatis sed. In rhoncus lacus nec nibh dictum, nec suscipit nibh congue. In id aliquam neque. Ut mauris lacus, vulputate et commodo id, molestie eu lectus. Mauris sed lectus ac metus commodo sollicitudin. Mauris nec bibendum eros, sed facilisis dui. Vestibulum fringilla ornare nibh vel dapibus. Nullam et libero sagittis ex sodales convallis. Donec pretium lobortis urna quis lacinia. Morbi finibus semper eleifend. Vivamus mattis ultrices elementum.)", "fonts/arial.ttf", 14, Size(170, 400));
+        m_help = Label::createWithTTF("", "fonts/arial.ttf", 14, Size(170, 400));
         m_help->setPosition(visibleSize.width - 95, visibleSize.height - 400);
         addChild(m_help);
     }
@@ -180,7 +195,7 @@ void MainLayer::repeat(Cell start, Cell end, std::function<void()> doAfter) {
         m_lines = nullptr;
     }
 
-    m_lines = DrawNode::create(2);
+    m_lines = DrawNode::create();
     for(size_t i = 0; i < tour.size() - 1; ++i){
         m_lines->drawLine(
                 m_cells[cellIndex(tour[i])].m_spriteEnabled->getPosition(),
@@ -204,105 +219,35 @@ void MainLayer::repeat(Cell start, Cell end, std::function<void()> doAfter) {
 }
 
 void MainLayer::createCells(cocos2d::Node* layer) {
-
-    m_cells = {
-        createCell(layer, "a", "1"),
-        createCell(layer, "a", "2"),
-        createCell(layer, "a", "3"),
-        createCell(layer, "a", "4"),
-        createCell(layer, "a", "5"),
-        createCell(layer, "a", "6"),
-        createCell(layer, "a", "7"),
-        createCell(layer, "a", "8"),
-
-        createCell(layer, "b", "1"),
-        createCell(layer, "b", "2"),
-        createCell(layer, "b", "3"),
-        createCell(layer, "b", "4"),
-        createCell(layer, "b", "5"),
-        createCell(layer, "b", "6"),
-        createCell(layer, "b", "7"),
-        createCell(layer, "b", "8"),
-
-        createCell(layer, "c", "1"),
-        createCell(layer, "c", "2"),
-        createCell(layer, "c", "3"),
-        createCell(layer, "c", "4"),
-        createCell(layer, "c", "5"),
-        createCell(layer, "c", "6"),
-        createCell(layer, "c", "7"),
-        createCell(layer, "c", "8"),
-
-        createCell(layer, "d", "1"),
-        createCell(layer, "d", "2"),
-        createCell(layer, "d", "3"),
-        createCell(layer, "d", "4"),
-        createCell(layer, "d", "5"),
-        createCell(layer, "d", "6"),
-        createCell(layer, "d", "7"),
-        createCell(layer, "d", "8"),
-
-        createCell(layer, "e", "1"),
-        createCell(layer, "e", "2"),
-        createCell(layer, "e", "3"),
-        createCell(layer, "e", "4"),
-        createCell(layer, "e", "5"),
-        createCell(layer, "e", "6"),
-        createCell(layer, "e", "7"),
-        createCell(layer, "e", "8"),
-
-        createCell(layer, "f", "1"),
-        createCell(layer, "f", "2"),
-        createCell(layer, "f", "3"),
-        createCell(layer, "f", "4"),
-        createCell(layer, "f", "5"),
-        createCell(layer, "f", "6"),
-        createCell(layer, "f", "7"),
-        createCell(layer, "f", "8"),
-
-        createCell(layer, "g", "1"),
-        createCell(layer, "g", "2"),
-        createCell(layer, "g", "3"),
-        createCell(layer, "g", "4"),
-        createCell(layer, "g", "5"),
-        createCell(layer, "g", "6"),
-        createCell(layer, "g", "7"),
-        createCell(layer, "g", "8"),
-
-        createCell(layer, "h", "1"),
-        createCell(layer, "h", "2"),
-        createCell(layer, "h", "3"),
-        createCell(layer, "h", "4"),
-        createCell(layer, "h", "5"),
-        createCell(layer, "h", "6"),
-        createCell(layer, "h", "7"),
-        createCell(layer, "h", "8"),
-    };
+    for(int row = 0; row < rows; ++row)
+        for(int col = 0; col < cols; ++col)
+            m_cells.push_back(createCell(layer, {row, col}));
 }
 
-CellNode MainLayer::createCell(Node* layer, const std::string& row, const std::string& column) {
-    assert(layer);
-    assert(!row.empty());
-    assert(!column.empty());
+const char* rows_[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
+const char* cols_[] = {"1", "2", "3", "4", "5", "6", "7", "8"};
 
-    auto spriteEnabled = Sprite::create("cell_normal/" + row + column + ".png");
+CellNode MainLayer::createCell(Node* layer, Cell cell) {
+    assert(layer);
+
+    auto spriteEnabled = Sprite::create("cell_normal/" + string(rows_[cell.row]) + string(cols_[cell.col]) + ".png");
     assert(spriteEnabled);
     spriteEnabled->retain();
     spriteEnabled->setVisible(true);
     layer->addChild(spriteEnabled);
 
-    auto spriteDisabled = Sprite::create("cell_disabled/" + row + column + ".png");
+    auto spriteDisabled = Sprite::create("cell_disabled/" + string(rows_[cell.row]) + string(cols_[cell.col]) + ".png");
     assert(spriteDisabled);
     spriteDisabled->retain();
     spriteDisabled->setVisible(false);
     layer->addChild(spriteDisabled);
 
-    auto label = Label::createWithTTF(row + column, "fonts/arial.ttf", 12);
+    auto label = Label::createWithTTF(string(rows_[cell.row]) + cols_[cell.col], "fonts/arial.ttf", 12);
     assert(label);
     label->retain();
     label->setColor(Color3B { 0, 0, 0 });
     layer->addChild(label);
-    return {spriteEnabled, spriteDisabled, label};
+    return {spriteEnabled, spriteDisabled, label, cell};
 }
 
 Cell MainLayer::randomCell() {
@@ -342,6 +287,21 @@ Cell possibleMoves[8]{
     {-1, 2},
 };
 
+size_t MainLayer::findClosestCellNode(const cocos2d::Vec2& mousePos) const {
+
+    float minDist = numeric_limits<float>::max();
+    size_t minIndx = 0;
+
+    for(size_t i = 0; i < m_cells.size(); ++i){
+        float dist = mousePos.distance(m_cells[i].m_spriteEnabled->getPosition());
+        if(dist < minDist){
+            minDist = dist;
+            minIndx = i;
+        }
+    }
+    return minIndx;
+}
+
 bool MainLayer::findKnightsTour(std::vector<Cell>& tour, std::vector<int>& chessBoard,
         int position, const Cell& currentCell, const Cell& endCell) const {
 
@@ -375,6 +335,8 @@ void MainLayer::autoButtonHandler(Ref*, cocos2d::extension::Control::EventType e
 void MainLayer::ManualState::onEnter(MainLayer* m) {
     m->m_help->setString(R"(-- Для начала демонстрации перетащите Коня и цель на желаемые клетки и нажмите "Начать"
 -- Для показа демонстрации в Автоматическом режиме нажмите "Авто режим")");
+    m_figures = {{m->m_knight, {}}, {m->m_target, {}}};
+    m_currentFigure = m_figures.begin();
 }
 
 void MainLayer::ManualState::onExit(MainLayer* m) {
@@ -382,6 +344,15 @@ void MainLayer::ManualState::onExit(MainLayer* m) {
 }
 
 void MainLayer::ManualState::handleStart(MainLayer* m) {
+    if(m_currentFigure == m_figures.end()){
+        assert(m_figures.size() == 2);
+
+        Cell knightCell = m_figures.at(0).m_cell,
+            targetCell = m_figures.at(1).m_cell;
+
+        m->switchState<TourAnimationState>();
+        m->repeat(knightCell, targetCell, {});
+    }
 }
 
 void MainLayer::ManualState::handleAuto(MainLayer* m) {
@@ -389,6 +360,16 @@ void MainLayer::ManualState::handleAuto(MainLayer* m) {
 }
 
 void MainLayer::ManualState::handleMouse(MainLayer* m, Action action, float x, float y) {
+    if (m_currentFigure != m_figures.end()) {
+        if (action == Action::Hover) {
+            m_currentFigure->m_figure->setVisible(true);
+            size_t closestCell = m->findClosestCellNode(Vec2(x, y));
+            m_currentFigure->m_figure->setPosition(m->m_cells[closestCell].m_spriteEnabled->getPosition());
+            m_currentFigure->m_cell = m->m_cells[closestCell].m_cell;
+        } else if (action == Action::Down) {
+            m_currentFigure++;
+        }
+    }
 }
 
 void MainLayer::TourAnimationState::onEnter(MainLayer* m) {
@@ -397,7 +378,8 @@ void MainLayer::TourAnimationState::onEnter(MainLayer* m) {
 void MainLayer::TourAnimationState::onExit(MainLayer* m) {
 }
 
-void MainLayer::TourAnimationState::handleTourAnimationEnd(MainLayer*) {
+void MainLayer::TourAnimationState::handleTourAnimationEnd(MainLayer* m) {
+    m->switchState<ManualState>();
 }
 
 void MainLayer::AutoState::onEnter(MainLayer* m) {
