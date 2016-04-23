@@ -177,7 +177,7 @@ bool MainLayer::init() {
     }
 
     {
-        std::stringstream ss;
+        stringstream ss;
         ss << "Количество\nзаблокированных\nклеток: " << m_disabled;
         m_disabledCells = Label::createWithTTF(ss.str(), "fonts/arial.ttf", 14);
         m_disabledCells->setPosition(30, 650);
@@ -197,7 +197,7 @@ void MainLayer::menuCloseCallback(Ref*) {
 }
 
 void MainLayer::repeat(Cell start, Cell end, function<void()> doAfter,
-        std::function<void()> doError) {
+        function<void()> doError) {
 
     // Очищаем доску с маркерами и заполняем -1 те клетки которые у нас заблокированы
     vector<int> chessBoard(rows * cols);
@@ -324,21 +324,6 @@ size_t MainLayer::findClosestCellNode(const Vec2& mousePos) const {
     return minIndx;
 }
 
-// Смещения "возможные ходы Коня"
-MainLayer::Cell possibleMoves[8]{
-    {1, 2},
-    {2, 1},
-
-    {2, -1},
-    {1, -2},
-
-    {-1, -2},
-    {-2, -1},
-
-    {-2, 1},
-    {-1, 2},
-};
-
 void MainLayer::reEnableCells() {
     for (auto & c : m_cells) {
         c.m_spriteEnabled->setVisible(true);
@@ -362,6 +347,40 @@ void MainLayer::reDisableCells() {
     }
 }
 
+int MainLayer::smul(const Cell& a, const Cell& b) {
+    return a.row * b.row + a.col * b.col;
+}
+
+float MainLayer::len(const Cell& a) {
+    return sqrt(a.row * a.row + a.col * a.col);
+}
+
+float MainLayer::icos(const Cell& c1, const Cell& c2) {
+    return smul(c1, c2) / (len(c1) * len(c2));
+}
+
+void MainLayer::optimumOffset(vector<MainLayer::Cell>& offset, const Cell& start, const Cell& end) {
+    Cell dir{end.row - start.row, end.col - start.col};
+    std::sort(offset.begin(), offset.end(), [&dir](const Cell& a, const Cell& b){
+        return icos(a, dir) > icos(b, dir);
+    });
+}
+
+// Смещения "возможные ходы Коня"
+vector<MainLayer::Cell> offset{
+    {1, 2},
+    {2, 1},
+
+    {2, -1},
+    {1, -2},
+
+    {-1, -2},
+    {-2, -1},
+
+    {-2, 1},
+    {-1, 2},
+};
+
 bool MainLayer::findKnightsTour(
         vector<Cell>& tour,
         vector<int>& chessBoard,
@@ -369,7 +388,10 @@ bool MainLayer::findKnightsTour(
         const Cell& currentCell,
         const Cell& endCell
         ) {
-    for (const auto& c : possibleMoves) {
+
+    optimumOffset(offset, currentCell, endCell);
+
+    for (const auto& c : offset) {
         int col = currentCell.col + c.col;
         int row = currentCell.row + c.row;
 
@@ -385,7 +407,7 @@ bool MainLayer::findKnightsTour(
             return findKnightsTour(tour, chessBoard, position, r, endCell);
         }
     }
-    if (tour.size() > 2) {
+    if (tour.size() > 1) {
         tour.pop_back();
         return findKnightsTour(tour, chessBoard, position, tour.back(), endCell);
     } else {
@@ -402,7 +424,7 @@ void MainLayer::autoButtonHandler(Ref*, Control::EventType eventType) {
 }
 
 string MainLayer::updateDisableLabelText() {
-    std::stringstream ss;
+    stringstream ss;
     ss << "Количество\nзаблокированных\nклеток: " << m_disabled;
     return ss.str();
 }
@@ -414,7 +436,8 @@ void MainLayer::plus(Ref*, cocos2d::extension::Control::EventType eventType) {
 }
 
 void MainLayer::minus(Ref*, cocos2d::extension::Control::EventType eventType) {
-    m_disabled--;
+    if(m_disabled > 0)
+        m_disabled--;
     m_disabledCells->setString(updateDisableLabelText());
 }
 
@@ -564,18 +587,20 @@ void MainLayer::AutoState::handleTourAnimationEnd(MainLayer* m) {
         m->switchState<PrepareState>();
 }
 
+const int wd1 = 150, wd2 = 130;
+
 void MainLayer::createWat(cocos2d::Node* l, const cocos2d::Size& size) {
     m_wat = Sprite::create("wat.png");
     assert(m_wat);
-    m_wat->setPosition(size.width / 2, size.height / 2);
+    m_wat->setPosition(size.width - size.width / 8 + 30, size.height / 8 - wd1);
+    m_wat->setScale(.3f);
     m_wat->setVisible(false);
     l->addChild(m_wat);
 
-    m_watMessage = Label::createWithTTF("", "fonts/arial.ttf", 24);
+    m_watMessage = Label::createWithTTF("", "fonts/arial.ttf", 12);
     assert(m_watMessage);
-    m_watMessage->setPosition(size.width / 2, size.height / 2 - 235);
+    m_watMessage->setPosition(size.width - size.width / 8 + 30, size.height / 8 + 70 - wd1);
     m_watMessage->setVisible(false);
-    m_watMessage->setColor(Color3B{255, 0, 0});
     l->addChild(m_watMessage);
 }
 
@@ -583,12 +608,17 @@ void MainLayer::WatState::onEnter(MainLayer* m) {
     m->m_wat->setVisible(true);
     m->m_watMessage->setString(m_message);
     m->m_watMessage->setVisible(true);
-    m->runAction(Sequence::create(
-            DelayTime::create(2.),
+    m->m_wat->runAction(Sequence::create(
+            MoveBy::create(2.f, Vec2(0, wd2)),
+            MoveBy::create(2.f, Vec2(0, -wd2)),
             CallFunc::create([=]{
                 assert(m_afterWat);
                 m_afterWat();
             }),
+            nullptr));
+    m->m_watMessage->runAction(Sequence::create(
+            MoveBy::create(2.f, Vec2(0, wd2)),
+            MoveBy::create(2.f, Vec2(0, -wd2)),
             nullptr));
 }
 

@@ -72,6 +72,11 @@ private:
         return cellIndex(cell.row, cell.col);
     }
 
+    static int smul(const Cell& a, const Cell& b);
+    static float len(const Cell& a);
+    static float icos(const Cell& c1, const Cell& c2);
+    static void optimumOffset(std::vector<Cell>& offset, const Cell& start, const Cell& end);
+
     // Поиск пути для Коня
     static bool findKnightsTour(
         std::vector<Cell> &tour,      // путь
