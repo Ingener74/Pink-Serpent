@@ -389,6 +389,7 @@ bool MainLayer::findKnightsTour(
         const Cell& endCell
         ) {
 
+    // сортируем смещения по косинусу чтобы Конь шёл в сторону цели
     optimumOffset(offset, currentCell, endCell);
 
     for (const auto& c : offset) {
