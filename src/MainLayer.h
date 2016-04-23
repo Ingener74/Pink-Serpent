@@ -33,7 +33,12 @@ public:
 
     void startButtonHandler(Ref*, cocos2d::extension::Control::EventType);
     void autoButtonHandler(Ref*, cocos2d::extension::Control::EventType);
-    void repeat(Cell start, Cell end, std::function<void()> doAfter);
+
+    void plus(Ref*, cocos2d::extension::Control::EventType);
+    void minus(Ref*, cocos2d::extension::Control::EventType);
+
+    void repeat(Cell start, Cell end, std::function<void()> doAfter,
+            std::function<void()> doError = {});
 
     static const int side = 80, rows = 8, cols = 8;
 
@@ -43,8 +48,18 @@ private:
     cocos2d::extension::ControlButton* m_startButton = nullptr;
     cocos2d::extension::ControlButton* m_autoButton = nullptr;
 
+    cocos2d::Label* m_disabledCells = nullptr;
+    cocos2d::extension::ControlButton* m_plusButton = nullptr;
+    cocos2d::extension::ControlButton* m_minusButton = nullptr;
+
     CellNode createCell(cocos2d::Node*, Cell);
     void createCells(cocos2d::Node*);
+
+    void reEnableCells();
+    void reDisableCells();
+
+    std::string updateDisableLabelText();
+
     size_t findClosestCellNode(const cocos2d::Vec2& mousePos) const;
 
     static Cell randomCell();
@@ -75,6 +90,10 @@ private:
     cocos2d::Sprite* m_selection = nullptr;  // Выделение
     cocos2d::DrawNode* m_lines = nullptr;    // Линия показывающая просчитанный путь
 
+    cocos2d::Sprite* m_wat = nullptr;
+    cocos2d::Label* m_watMessage = nullptr;
+    void createWat(cocos2d::Node*, const cocos2d::Size&);
+
     enum class Action {
         Down,    // Мышь нажата
         Up,      // Мышь отжата
@@ -88,18 +107,24 @@ private:
     public:
         virtual ~State() = default;
 
-        virtual void onEnter(MainLayer*){
-        }
-        virtual void onExit(MainLayer*){
-        }
-        virtual void handleStart(MainLayer*) {
-        }
-        virtual void handleAuto(MainLayer*) {
-        }
-        virtual void handleMouse(MainLayer*, Action, float x, float y) {
-        }
-        virtual void handleTourAnimationEnd(MainLayer*) {
-        }
+        virtual void onEnter(MainLayer*){}
+        virtual void onExit(MainLayer*){}
+        virtual void handleStart(MainLayer*){}
+        virtual void handleAuto(MainLayer*){}
+        virtual void handleMouse(MainLayer*, Action, float x, float y){}
+        virtual void handleTourAnimationEnd(MainLayer*){}
+    };
+
+    class PrepareState: public State {
+        bool m_firstTime;
+    public:
+        PrepareState(bool firstTime = false);
+        virtual ~PrepareState() = default;
+
+        virtual void onEnter(MainLayer*);
+        virtual void onExit(MainLayer*);
+        virtual void handleStart(MainLayer*);
+        virtual void handleAuto(MainLayer*);
     };
 
     // Состояния работы в ручном режиме
@@ -122,6 +147,8 @@ private:
 
         FiguresCellNodes m_figures;
         FiguresCellNodes ::iterator m_currentFigure;
+        bool m_check = false;
+        bool m_onEnable = false;
     };
 
     // Состояние ожидания работы анимации движения Коня по пути
@@ -148,13 +175,27 @@ private:
         bool m_exit = false;
     };
 
+    class WatState: public State {
+        std::function<void()> m_afterWat;
+        std::string m_message;
+    public:
+        WatState(std::function<void()> afterWat, const std::string& message =
+                "Ошибка") :
+                m_afterWat(afterWat), m_message(message) {
+        }
+        virtual ~WatState() = default;
+
+        virtual void onEnter(MainLayer*);
+        virtual void onExit(MainLayer*);
+    };
+
     // Переключение состояния
-    template<typename T>
-    void switchState() {
+    template<typename T, typename ... Args>
+    void switchState(Args&& ...args) {
         if(m_state){
             m_state->onExit(this);
         }
-        m_state.reset(new T);
+        m_state.reset(new T(std::forward<Args>(args)...));
         m_state->onEnter(this);
     }
     std::unique_ptr<State> m_state;

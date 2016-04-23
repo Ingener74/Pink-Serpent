@@ -3,7 +3,7 @@
 
 using namespace std;
 using namespace cocos2d;
-using namespace cocos2d::extension;
+using namespace extension;
 
 MainLayer::MainLayer() {
 }
@@ -100,11 +100,6 @@ bool MainLayer::init() {
                 m_cells[cellIndex(row, col)].m_label->setPosition(pos);
             }
         }
-        for (size_t i = 0; i < m_disabled; ++i) {
-            auto rc = randomCell();
-            m_cells[cellIndex(rc)].m_spriteEnabled->setVisible(false);
-            m_cells[cellIndex(rc)].m_spriteDisabled->setVisible(true);
-        }
 
         {
             auto leftBorder = Sprite::create("cell_normal/border_left_legend.png");
@@ -165,7 +160,34 @@ bool MainLayer::init() {
         addChild(m_help);
     }
 
-    switchState<ManualState>();
+    {
+        m_plusButton = ControlButton::create(Label::createWithTTF("+", "fonts/arial.ttf", 36), Scale9Sprite::create("button.png"));
+        m_plusButton->setBackgroundSpriteForState(Scale9Sprite::create("buttonHighlighted.png"), Control::State::HIGH_LIGHTED);
+        m_plusButton->setPosition(30, 700);
+        m_plusButton->addTargetWithActionForControlEvents(this, static_cast<void (Ref::*)(Ref*, Control::EventType)>(&MainLayer::plus), Control::EventType::TOUCH_DOWN);
+        addChild(m_plusButton);
+    }
+
+    {
+        m_minusButton = ControlButton::create(Label::createWithTTF("-", "fonts/arial.ttf", 36), Scale9Sprite::create("button.png"));
+        m_minusButton->setBackgroundSpriteForState(Scale9Sprite::create("buttonHighlighted.png"), Control::State::HIGH_LIGHTED);
+        m_minusButton->setPosition(30, 600);
+        m_minusButton->addTargetWithActionForControlEvents(this, static_cast<void (Ref::*)(Ref*, Control::EventType)>(&MainLayer::minus), Control::EventType::TOUCH_DOWN);
+        addChild(m_minusButton);
+    }
+
+    {
+        std::stringstream ss;
+        ss << "Количество\nзаблокированных\nклеток: " << m_disabled;
+        m_disabledCells = Label::createWithTTF(ss.str(), "fonts/arial.ttf", 14);
+        m_disabledCells->setPosition(30, 650);
+        m_disabledCells->setAnchorPoint(Vec2(.2f, .5f));
+        addChild(m_disabledCells);
+    }
+
+    createWat(this, visibleSize);
+
+    switchState<PrepareState>(true);
 
     return true;
 }
@@ -174,19 +196,28 @@ void MainLayer::menuCloseCallback(Ref*) {
     Director::getInstance()->end();
 }
 
-void MainLayer::repeat(Cell start, Cell end, std::function<void()> doAfter) {
+void MainLayer::repeat(Cell start, Cell end, function<void()> doAfter,
+        std::function<void()> doError) {
 
     // Очищаем доску с маркерами и заполняем -1 те клетки которые у нас заблокированы
-    std::vector<int> chessBoard(rows * cols);
+    vector<int> chessBoard(rows * cols);
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
             chessBoard[cellIndex(row, col)] = -1 * !m_cells[cellIndex(row, col)].m_spriteEnabled->isVisible();
         }
     }
 
-    // Ищем путь
+    assert(chessBoard.size() == rows * cols);
+
     vector<Cell> tour;
+    tour.push_back(start);
+    chessBoard[cellIndex(start)] = 1;
+
+    // Ищем путь
     bool tourExists = findKnightsTour(tour, chessBoard, 1, start, end);
+    if(!tourExists && doError){
+        doError();
+    }
 
     // Копазываем маркеры на доске
     for (int row = 0; row < rows; ++row) {
@@ -227,7 +258,7 @@ void MainLayer::repeat(Cell start, Cell end, std::function<void()> doAfter) {
     m_knight->runAction(Sequence::create(knightsMoves));
 }
 
-void MainLayer::createCells(cocos2d::Node* layer) {
+void MainLayer::createCells(Node* layer) {
     for(int row = 0; row < rows; ++row)
         for(int col = 0; col < cols; ++col)
             m_cells.push_back(createCell(layer, {row, col}));
@@ -267,13 +298,9 @@ MainLayer::Cell MainLayer::randomCell() {
 }
 
 MainLayer::Cell MainLayer::randomEnabledCell() const {
-    { // Проверяем что есть не заблокированые клетки чтобы не зависнуть
-        bool check = false;
-        for (size_t i = 0; i < rows * cols; ++i) {
-            check = m_cells[i].m_spriteEnabled->isVisible();
-        }
-        assert(check);
-    }
+
+    // Проверяем что есть не заблокированые клетки чтобы не зависнуть
+    assert(m_disabled != rows * cols);
 
     while (true) {
         auto rc = randomCell();
@@ -282,7 +309,7 @@ MainLayer::Cell MainLayer::randomEnabledCell() const {
     }
 }
 
-size_t MainLayer::findClosestCellNode(const cocos2d::Vec2& mousePos) const {
+size_t MainLayer::findClosestCellNode(const Vec2& mousePos) const {
 
     float minDist = numeric_limits<float>::max();
     size_t minIndx = 0;
@@ -312,9 +339,36 @@ MainLayer::Cell possibleMoves[8]{
     {-1, 2},
 };
 
-bool MainLayer::findKnightsTour(std::vector<Cell>& tour, std::vector<int>& chessBoard,
-        int position, const Cell& currentCell, const Cell& endCell) {
+void MainLayer::reEnableCells() {
+    for (auto & c : m_cells) {
+        c.m_spriteEnabled->setVisible(true);
+        c.m_spriteDisabled->setVisible(false);
+    }
+}
 
+void MainLayer::reDisableCells() {
+    reEnableCells();
+
+    // Проверяем что есть не заблокированые клетки чтобы не зависнуть
+    assert(m_disabled != rows * cols);
+
+    for (size_t i = 0; i < m_disabled; /*++i*/) {
+        auto rc = randomCell();
+        if (m_cells[cellIndex(rc)].m_spriteEnabled->isVisible()) {
+            m_cells[cellIndex(rc)].m_spriteEnabled->setVisible(false);
+            m_cells[cellIndex(rc)].m_spriteDisabled->setVisible(true);
+            ++i;
+        }
+    }
+}
+
+bool MainLayer::findKnightsTour(
+        vector<Cell>& tour,
+        vector<int>& chessBoard,
+        int position,
+        const Cell& currentCell,
+        const Cell& endCell
+        ) {
     for (const auto& c : possibleMoves) {
         int col = currentCell.col + c.col;
         int row = currentCell.row + c.row;
@@ -323,32 +377,87 @@ bool MainLayer::findKnightsTour(std::vector<Cell>& tour, std::vector<int>& chess
             Cell r { row, col };
             tour.push_back(r);
 
-            chessBoard[cellIndex(row, col)] = position;
             position++;
+            chessBoard[cellIndex(row, col)] = position;
 
             if (r.row == endCell.row && r.col == endCell.col)
                 return true;
             return findKnightsTour(tour, chessBoard, position, r, endCell);
         }
     }
-    return false;
+    if (tour.size() > 2) {
+        tour.pop_back();
+        return findKnightsTour(tour, chessBoard, position, tour.back(), endCell);
+    } else {
+        return false;
+    }
 }
 
-void MainLayer::startButtonHandler(Ref*, cocos2d::extension::Control::EventType eventType) {
+void MainLayer::startButtonHandler(Ref*, Control::EventType eventType) {
     m_state->handleStart(this);
 }
 
-void MainLayer::autoButtonHandler(Ref*, cocos2d::extension::Control::EventType eventType) {
+void MainLayer::autoButtonHandler(Ref*, Control::EventType eventType) {
     m_state->handleAuto(this);
 }
 
+string MainLayer::updateDisableLabelText() {
+    std::stringstream ss;
+    ss << "Количество\nзаблокированных\nклеток: " << m_disabled;
+    return ss.str();
+}
+
+void MainLayer::plus(Ref*, cocos2d::extension::Control::EventType eventType) {
+    if(m_disabled < (rows * cols - 2))
+        m_disabled++;
+    m_disabledCells->setString(updateDisableLabelText());
+}
+
+void MainLayer::minus(Ref*, cocos2d::extension::Control::EventType eventType) {
+    m_disabled--;
+    m_disabledCells->setString(updateDisableLabelText());
+}
+
+MainLayer::PrepareState::PrepareState(bool firstTime) :
+        m_firstTime(firstTime) {
+}
+
+void MainLayer::PrepareState::onEnter(MainLayer* m) {
+    m->m_knight->setVisible(!m_firstTime);
+    m->m_target->setVisible(!m_firstTime);
+    m->m_startButton->setEnabled(true);
+    m->m_startButton->setEnabled(true);
+    m->m_help->setString(R"(Выберите режим работы 
+-- для ручного режима работы нажмите "Начать"
+-- для автоматического режима работы нажмите "Авто режим")");
+}
+
+void MainLayer::PrepareState::onExit(MainLayer* m) {
+    m->m_help->setString("");
+}
+
+void MainLayer::PrepareState::handleStart(MainLayer* m) {
+    m->switchState<ManualState>();
+}
+
+void MainLayer::PrepareState::handleAuto(MainLayer* m) {
+    m->switchState<AutoState>();
+}
+
 void MainLayer::ManualState::onEnter(MainLayer* m) {
+    if(m->m_lines)
+        m->m_lines->setVisible(false);
+
+    m->m_target->setVisible(false);
+
     m->m_startButton->setEnabled(true);
     m->m_startButton->setEnabled(true);
     m->m_help->setString(R"(-- Для начала демонстрации перетащите Коня и цель на желаемые клетки и нажмите "Начать"
 -- Для показа демонстрации в Автоматическом режиме нажмите "Авто режим")");
-    m_figures = {{m->m_knight, {}}, {m->m_target, {}}};
-    m_currentFigure = m_figures.begin();
+
+    m->reDisableCells();
+
+    m_currentFigure = m_figures.end();
 }
 
 void MainLayer::ManualState::onExit(MainLayer* m) {
@@ -363,7 +472,11 @@ void MainLayer::ManualState::handleStart(MainLayer* m) {
             targetCell = m_figures.at(1).m_cell;
 
         m->switchState<TourAnimationState>();
-        m->repeat(knightCell, targetCell, {});
+        m->repeat(knightCell, targetCell, {}, [m]{
+            m->switchState<WatState>([m]{
+                m->switchState<PrepareState>();
+            }, "Нету решения для хода :(");
+        });
     }
 }
 
@@ -376,10 +489,19 @@ void MainLayer::ManualState::handleMouse(MainLayer* m, Action action, float x, f
         if (action == Action::Hover) {
             m_currentFigure->m_figure->setVisible(true);
             size_t closestCell = m->findClosestCellNode(Vec2(x, y));
-            m_currentFigure->m_figure->setPosition(m->m_cells[closestCell].m_spriteEnabled->getPosition());
+            auto sprite = m->m_cells[closestCell].m_spriteEnabled;
+            m_onEnable = sprite->isVisible();
+            m_currentFigure->m_figure->setPosition(sprite->getPosition());
             m_currentFigure->m_cell = m->m_cells[closestCell].m_cell;
         } else if (action == Action::Down) {
-            m_currentFigure++;
+            if(m_onEnable)
+                m_currentFigure++;
+        }
+    } else {
+        if (action == Action::Up && !m_check) {
+            m_figures = { {m->m_knight, {}}, {m->m_target, {}}};
+            m_currentFigure = m_figures.begin();
+            m_check = true;
         }
     }
 }
@@ -387,28 +509,43 @@ void MainLayer::ManualState::handleMouse(MainLayer* m, Action action, float x, f
 void MainLayer::TourAnimationState::onEnter(MainLayer* m) {
     m->m_startButton->setEnabled(false);
     m->m_startButton->setEnabled(false);
+    m->m_help->setString(R"(-- После завершения анимации программа перейдёт в ручной режим работы)");
 }
 
 void MainLayer::TourAnimationState::onExit(MainLayer* m) {
+    m->m_help->setString("");
 }
 
 void MainLayer::TourAnimationState::handleTourAnimationEnd(MainLayer* m) {
-    m->switchState<ManualState>();
+    m->switchState<PrepareState>();
 }
 
 void MainLayer::AutoState::onEnter(MainLayer* m) {
+    if (!m->m_target->isVisible()) {
+        m->m_target->setVisible(true);
+    }
+    if (!m->m_knight->isVisible()) {
+        m->m_knight->setVisible(true);
+    }
     m->m_startButton->setEnabled(false);
-    m->m_help->setString(R"(-- Чтобы закончить демонстрацию в Автоматическом режиме нажмите "Авто режим")");
+    m->m_help->setString(R"(-- Чтобы закончить демонстрацию в Автоматическом режиме нажмите "Авто режим" и после завершения анимации программа перейдёт в режим режим выбора работы)");
     m_func = [=] {
         if(m_exit)
             return;
+
+        m->reDisableCells();
+
         auto randomTargetCell = m->randomEnabledCell();
         m->m_target->setPosition(m->m_cells[m->cellIndex(randomTargetCell)].m_spriteEnabled->getPosition());
 
         auto randomKnightCell = m->randomEnabledCell();
         m->m_knight->setPosition(m->m_cells[m->cellIndex(randomKnightCell)].m_spriteEnabled->getPosition());
 
-        m->repeat(randomKnightCell, randomTargetCell, m_func);
+        m->repeat(randomKnightCell, randomTargetCell, m_func, [m]{
+            m->switchState<WatState>([m]{
+                m->switchState<AutoState>();
+            }, "Нету решения для хода :(");
+        });
     };
     m_exit = false;
     m_func();
@@ -424,6 +561,38 @@ void MainLayer::AutoState::handleAuto(MainLayer*) {
 
 void MainLayer::AutoState::handleTourAnimationEnd(MainLayer* m) {
     if (m_exit)
-        m->switchState<ManualState>();
+        m->switchState<PrepareState>();
 }
 
+void MainLayer::createWat(cocos2d::Node* l, const cocos2d::Size& size) {
+    m_wat = Sprite::create("wat.png");
+    assert(m_wat);
+    m_wat->setPosition(size.width / 2, size.height / 2);
+    m_wat->setVisible(false);
+    l->addChild(m_wat);
+
+    m_watMessage = Label::createWithTTF("", "fonts/arial.ttf", 24);
+    assert(m_watMessage);
+    m_watMessage->setPosition(size.width / 2, size.height / 2 - 235);
+    m_watMessage->setVisible(false);
+    m_watMessage->setColor(Color3B{255, 0, 0});
+    l->addChild(m_watMessage);
+}
+
+void MainLayer::WatState::onEnter(MainLayer* m) {
+    m->m_wat->setVisible(true);
+    m->m_watMessage->setString(m_message);
+    m->m_watMessage->setVisible(true);
+    m->runAction(Sequence::create(
+            DelayTime::create(2.),
+            CallFunc::create([=]{
+                assert(m_afterWat);
+                m_afterWat();
+            }),
+            nullptr));
+}
+
+void MainLayer::WatState::onExit(MainLayer* m) {
+    m->m_wat->setVisible(false);
+    m->m_watMessage->setVisible(false);
+}

@@ -40,7 +40,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
 
     FileUtils::getInstance()->setSearchPaths(searchPath);
 
-    director->setDisplayStats(true);
+    director->setDisplayStats(false);
 
     director->setAnimationInterval(1.0 / 60);
 
