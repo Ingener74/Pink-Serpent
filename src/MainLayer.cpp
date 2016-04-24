@@ -390,29 +390,40 @@ bool MainLayer::findKnightsTour(
         ) {
 
     // сортируем смещения по косинусу чтобы Конь шёл в сторону цели
+    // (Этот вызов можно просто закоментировать и конь будет ходить по неоптимальным ходам)
     optimumOffset(offset, currentCell, endCell);
 
+    // перебираем смещения
     for (const auto& c : offset) {
+
+        // переходим по смещению
         int col = currentCell.col + c.col;
         int row = currentCell.row + c.row;
 
+        // проверяем что мы можем сюда перейти и эту клетку мы не посещали
         if (col >= 0 && col < cols && row >= 0 && row < rows && chessBoard[cellIndex(row, col)] == 0) {
+
+            // если можем перейти тогда добавляем её к пути
             Cell r { row, col };
             tour.push_back(r);
 
+            // и помечаем клетку как посещённую
             position++;
             chessBoard[cellIndex(row, col)] = position;
 
+            // если эта конечная клетка ...
             if (r.row == endCell.row && r.col == endCell.col)
-                return true;
+                return true; // ... Тогда выходим ...
+            // ... иначе ищём дальше
             return findKnightsTour(tour, chessBoard, position, r, endCell);
         }
     }
-    if (tour.size() > 1) {
-        tour.pop_back();
-        return findKnightsTour(tour, chessBoard, position, tour.back(), endCell);
+    // если мы прошли по всем возможным смещениям но они посещались нами тогда ...
+    if (tour.size() > 1) { // ,.. проверям можем ли мы откатиться назад ...
+        tour.pop_back(); // ... если можем когда откатываемся на один шаг назад ...
+        return findKnightsTour(tour, chessBoard, position, tour.back(), endCell); // ... и ищем путь дальше
     } else {
-        return false;
+        return false; // иначе откатываться нам больше некуда и мы перебрали все возможные ходы, выходим с печалькой
     }
 }
 
