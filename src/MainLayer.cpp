@@ -556,8 +556,11 @@ void MainLayer::ManualState::handleMouse(MainLayer* m, Action action, float x, f
             m_currentFigure->m_figure->setPosition(sprite->getPosition());
             m_currentFigure->m_cell = m->m_cells[closestCell].m_cell;
         } else if (action == Action::Down) {
-            if(m_onEnable)
+			if (m_onEnable)
+			{
                 m_currentFigure++;
+				m_onEnable = false;
+			}
         }
     } else {
         if (action == Action::Up && !m_check) {
