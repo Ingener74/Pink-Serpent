@@ -32,3 +32,10 @@ build/
 /.cproject
 /.project
 /.settings/
+proj.win32/Debug.win32/
+proj.win32/Release.win32/Pink-Serpent.log
+proj.win32/Release.win32/Pink-Serpent.tlog/CL.read.1.tlog
+proj.win32/Pink-Serpent.opensdf
+proj.win32/Pink-Serpent.sdf
+proj.win32/Pink-Serpent.v12.suo
+proj.win32/Release.win32/
