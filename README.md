@@ -17,4 +17,4 @@ make -j4
 ```
 https://youtu.be/ztN5gRm7s8I
 ![Github Logo](/Resources/1.png)
-![Github Logo](/Resources/screenshot.png)
+![Github Logo](/Resources/2.png)
