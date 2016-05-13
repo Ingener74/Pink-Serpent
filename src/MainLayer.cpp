@@ -1,4 +1,5 @@
 #include <iostream>
+#include "JsonFileListener.h"
 #include "MainLayer.h"
 
 using namespace std;
@@ -21,6 +22,13 @@ Scene* MainLayer::scene() {
 bool MainLayer::init() {
     if (!Layer::init())
         return false;
+
+    m_jfl.reset(new JsonFileListener([=](int dis) {
+        Director::getInstance()->getScheduler()->performFunctionInCocosThread([=] {
+            m_disabled = dis;
+            m_disabledCells->setString(updateDisableLabelText());
+        });
+    }));
 
     // Обработчики мыши
     auto mouseListener = EventListenerMouse::create();

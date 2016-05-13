@@ -104,12 +104,14 @@ endif( WIN32 )
 set(GAME_SRC
   src/AppDelegate.cpp
   src/MainLayer.cpp
+  src/JsonFileListener.cpp
   ${PLATFORM_SPECIFIC_SRC}
 )
 
 set(GAME_HEADERS
   src/AppDelegate.h
   src/MainLayer.h
+  src/JsonFileListener.h
   ${PLATFORM_SPECIFIC_HEADERS}
 )
 

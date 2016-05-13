@@ -5,6 +5,8 @@
 #include <cocos2d.h>
 #include <cocos-ext.h>
 
+class JsonFileListener;
+
 class MainLayer: public cocos2d::Layer {
 public:
     // Клетка
@@ -98,6 +100,8 @@ private:
     cocos2d::Sprite* m_wat = nullptr;
     cocos2d::Label* m_watMessage = nullptr;
     void createWat(cocos2d::Node*, const cocos2d::Size&);
+
+    std::unique_ptr<JsonFileListener> m_jfl;
 
     enum class Action {
         Down,    // Мышь нажата
