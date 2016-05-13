@@ -27,10 +27,10 @@ bool AppDelegate::applicationDidFinishLaunching() {
 
     director->setOpenGLView(glview);
 
-    glview->setFrameSize(1024, 768);
-    glview->setDesignResolutionSize(1024, 768, ResolutionPolicy::NO_BORDER);
+//    Size frameSize = glview->getFrameSize();
+//    glview->setFrameSize(1024, 768);
 
-    Size frameSize = glview->getFrameSize();
+    glview->setDesignResolutionSize(1024, 768, ResolutionPolicy::SHOW_ALL);
 
     vector<string> searchPath;
 

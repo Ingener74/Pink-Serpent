@@ -50,6 +50,23 @@ bool MainLayer::init() {
     };
     _eventDispatcher->addEventListenerWithFixedPriority(mouseListener, 1);
 
+    auto touchListener = EventListenerTouchAllAtOnce::create();
+    touchListener->onTouchesBegan = [=](const std::vector<Touch*>& touches, Event* e) {
+        auto event = dynamic_cast<EventTouch*>(e);
+        assert(event);
+        if(!touches.empty())
+            m_state->handleMouse(this, Action::Down, touches.at(0)->getLocation().x, touches.at(0)->getLocation().y);
+    };
+    touchListener->onTouchesEnded = [=](const std::vector<Touch*>& touches, Event* e) {
+        auto event = dynamic_cast<EventTouch*>(e);
+        assert(event);
+        if(!touches.empty())
+            m_state->handleMouse(this, Action::Up, touches.at(0)->getLocation().x, touches.at(0)->getLocation().y);
+    };
+//    touchListener->onTouchesMoved = [](const std::vector<Touch*>& touches, Event* e) {
+//    };
+    _eventDispatcher->addEventListenerWithFixedPriority(touchListener, 2);
+
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
@@ -222,7 +239,9 @@ void MainLayer::repeat(Cell start, Cell end, function<void()> doAfter,
     // Копазываем маркеры на доске
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
-            m_cells[cellIndex(row, col)].m_label->setString(to_string(chessBoard[cellIndex(row, col)]));
+            stringstream ss;
+            ss << chessBoard[cellIndex(row, col)];
+            m_cells[cellIndex(row, col)].m_label->setString(ss.str());
         }
     }
 
