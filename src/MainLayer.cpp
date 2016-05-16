@@ -32,20 +32,20 @@ bool MainLayer::init() {
 
     // Обработчики мыши
     auto mouseListener = EventListenerMouse::create();
-    mouseListener->onMouseDown = [=](Event* e) {
-        auto event = dynamic_cast<EventMouse*>(e);
-        assert(event);
-        if(event->getMouseButton() == MOUSE_BUTTON_LEFT){
-            m_state->handleMouse(this, Action::Down, event->getCursorX(), event->getCursorY());
-        }
-    };
-    mouseListener->onMouseUp = [=](Event* e) {
-        auto event = dynamic_cast<EventMouse*>(e);
-        assert(event);
-        if(event->getMouseButton() == MOUSE_BUTTON_LEFT){
-            m_state->handleMouse(this, Action::Up, event->getCursorX(), event->getCursorY());
-        }
-    };
+//    mouseListener->onMouseDown = [=](Event* e) {
+//        auto event = dynamic_cast<EventMouse*>(e);
+//        assert(event);
+//        if(event->getMouseButton() == MOUSE_BUTTON_LEFT){
+//            m_state->handleMouse(this, Action::Down, event->getCursorX(), event->getCursorY());
+//        }
+//    };
+//    mouseListener->onMouseUp = [=](Event* e) {
+//        auto event = dynamic_cast<EventMouse*>(e);
+//        assert(event);
+//        if(event->getMouseButton() == MOUSE_BUTTON_LEFT){
+//            m_state->handleMouse(this, Action::Up, event->getCursorX(), event->getCursorY());
+//        }
+//    };
     mouseListener->onMouseMove = [=](Event* e) {
         auto event = dynamic_cast<EventMouse*>(e);
         assert(event);
@@ -62,14 +62,18 @@ bool MainLayer::init() {
     touchListener->onTouchesBegan = [=](const std::vector<Touch*>& touches, Event* e) {
         auto event = dynamic_cast<EventTouch*>(e);
         assert(event);
-        if(!touches.empty())
+        if(!touches.empty()) {
             m_state->handleMouse(this, Action::Down, touches.at(0)->getLocation().x, touches.at(0)->getLocation().y);
+//            m_state->handleMouse(this, Action::Down, touches.at(0)->getLocationInView().x, touches.at(0)->getLocationInView().y);
+        }
     };
     touchListener->onTouchesEnded = [=](const std::vector<Touch*>& touches, Event* e) {
         auto event = dynamic_cast<EventTouch*>(e);
         assert(event);
-        if(!touches.empty())
+        if(!touches.empty()) {
             m_state->handleMouse(this, Action::Up, touches.at(0)->getLocation().x, touches.at(0)->getLocation().y);
+//            m_state->handleMouse(this, Action::Up, touches.at(0)->getLocationInView().x, touches.at(0)->getLocationInView().y);
+        }
     };
 //    touchListener->onTouchesMoved = [](const std::vector<Touch*>& touches, Event* e) {
 //    };
@@ -549,24 +553,55 @@ void MainLayer::ManualState::handleAuto(MainLayer* m) {
 void MainLayer::ManualState::handleMouse(MainLayer* m, Action action, float x, float y) {
     if (m_currentFigure != m_figures.end()) {
         if (action == Action::Hover) {
+            // Показываем фигуру ...
             m_currentFigure->m_figure->setVisible(true);
+
+            // ... находим ближайшую к ней клетку ...
             size_t closestCell = m->findClosestCellNode(Vec2(x, y));
+
+            // ... берём спрайт ...
             auto sprite = m->m_cells[closestCell].m_spriteEnabled;
+
+            // ... держим в уме "включена ли фигура" ...
             m_onEnable = sprite->isVisible();
+
+            // ... двигаем фигуру на выбранную ближайшую клетку ...
             m_currentFigure->m_figure->setPosition(sprite->getPosition());
+
+            // ... запоминаем клетку куда поставили фигуру
             m_currentFigure->m_cell = m->m_cells[closestCell].m_cell;
         } else if (action == Action::Down) {
-			if (m_onEnable)
-			{
-                m_currentFigure++;
-				m_onEnable = false;
-			}
+            // Показываем фигуру ...
+            m_currentFigure->m_figure->setVisible(true);
+
+            // ... находим ближайшую к ней клетку ...
+            size_t closestCell = m->findClosestCellNode(Vec2(x, y));
+
+            // ... берём спрайт ...
+            auto sprite = m->m_cells[closestCell].m_spriteEnabled;
+
+            // ... держим в уме "включена ли фигура" ...
+            m_onEnable = sprite->isVisible();
+
+            // ... двигаем фигуру на выбранную ближайшую клетку ...
+            m_currentFigure->m_figure->setPosition(sprite->getPosition());
+
+            // ... запоминаем клетку куда поставили фигуру
+            m_currentFigure->m_cell = m->m_cells[closestCell].m_cell;
+
+            // Если фигура включена
+            if (m_onEnable /*&& m_currentFigure->m_up*/) {
+                m_currentFigure++; // ... работаем со следующей фигурой
+                m_onEnable = false;
+            }
         }
     } else {
-        if (action == Action::Up && !m_check) {
-            m_figures = { {m->m_knight, {}}, {m->m_target, {}}};
-            m_currentFigure = m_figures.begin();
-            m_check = true;
+        if (action == Action::Up) {
+            if (!m_check) {
+                m_figures = { {m->m_knight, {}}, {m->m_target, {}}};
+                m_currentFigure = m_figures.begin();
+                m_check = true;
+            }
         }
     }
 }
