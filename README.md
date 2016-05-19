@@ -15,7 +15,7 @@ cmake .. -DCMAKE_BUILD_TYPE={Debug|Release}
 make -j4
 ./PinkSerpent
 ```
-https://youtu.be/ztN5gRm7s8I
+[![IMAGE Pink-Serpent](http://img.youtube.com/vi/ztN5gRm7s8I/0.jpg)](http://www.youtube.com/watch?v=ztN5gRm7s8I)
 ![Github Logo](/Resources/1.png)
 ![Github Logo](/Resources/2.png)
 ![Github Logo](/Resources/3.png)
